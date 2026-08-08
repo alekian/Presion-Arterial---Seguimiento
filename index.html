@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Registro de Presión</title>
+<style>
+  :root{
+    --paper:#F6F7F3;
+    --grid:#E1E7E0;
+    --ink:#212B25;
+    --ink-soft:#5B6A61;
+    --teal:#1F6F78;
+    --teal-dark:#12464D;
+    --amber-line:#B5793A;
+    --normal:#3E8A5C;
+    --elevada:#C9A227;
+    --etapa1:#D9752F;
+    --etapa2:#C1443C;
+    --crisis:#7A1E1E;
+    --card:#FFFFFF;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      linear-gradient(var(--grid) 1px, transparent 1px) 0 0/100% 28px,
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px) 0 0/28px 100%,
+      var(--paper);
+    color:var(--ink);
+    font-family:"IBM Plex Sans","Segoe UI",Helvetica,Arial,sans-serif;
+    min-height:100vh;
+    padding:20px 14px 60px;
+  }
+  .wrap{max-width:640px;margin:0 auto;}
+
+  header{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    margin-bottom:18px;
+    padding-bottom:14px;
+    border-bottom:2px solid var(--ink);
+  }
+  header h1{
+    font-family:"IBM Plex Mono","SF Mono",Menlo,monospace;
+    font-size:1.3rem;
+    letter-spacing:-0.02em;
+    margin:0;
+    font-weight:700;
+  }
+  header .pulse{
+    width:64px;height:24px;
+    opacity:.85;
+  }
+
+  .card{
+    background:var(--card);
+    border:1px solid var(--grid);
+    border-radius:var(--radius);
+    box-shadow:0 1px 3px rgba(18,70,77,0.06);
+    padding:18px;
+    margin-bottom:18px;
+  }
+  .card h2{
+    font-family:"IBM Plex Mono",monospace;
+    font-size:.72rem;
+    text-transform:uppercase;
+    letter-spacing:.09em;
+    color:var(--ink-soft);
+    margin:0 0 14px;
+  }
+
+  /* ---- form ---- */
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .field{display:flex;flex-direction:column;gap:4px;margin-bottom:10px;}
+  .field label{font-size:.72rem;color:var(--ink-soft);font-weight:600;}
+  .field input, .field select{
+    font-family:"IBM Plex Mono",monospace;
+    font-size:1rem;
+    padding:10px 10px;
+    border:1.5px solid var(--grid);
+    border-radius:8px;
+    background:var(--paper);
+    color:var(--ink);
+    width:100%;
+  }
+  .field input:focus, .field select:focus{
+    outline:2px solid var(--teal);
+    outline-offset:1px;
+    border-color:var(--teal);
+  }
+  .bp-inputs{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:end;margin-bottom:10px;}
+  .bp-inputs .slash{
+    font-family:"IBM Plex Mono",monospace;
+    font-size:1.6rem;
+    color:var(--ink-soft);
+    padding-bottom:8px;
+    text-align:center;
+  }
+  .bp-inputs input{
+    font-size:1.7rem;
+    font-weight:700;
+    text-align:center;
+    padding:12px 6px;
+  }
+  button{
+    font-family:"IBM Plex Sans",sans-serif;
+    font-weight:600;
+    font-size:.92rem;
+    border:none;
+    border-radius:8px;
+    padding:12px 16px;
+    cursor:pointer;
+  }
+  .btn-primary{
+    background:var(--teal);
+    color:#fff;
+    width:100%;
+    margin-top:4px;
+  }
+  .btn-primary:hover{background:var(--teal-dark);}
+  .btn-primary:disabled{opacity:.5;cursor:not-allowed;}
+  .btn-ghost{
+    background:transparent;
+    color:var(--ink-soft);
+    border:1px solid var(--grid);
+    font-size:.78rem;
+    padding:8px 12px;
+  }
+  .btn-ghost:hover{border-color:var(--teal);color:var(--teal);}
+
+  /* ---- category badge ---- */
+  .badge{
+    display:inline-block;
+    font-family:"IBM Plex Mono",monospace;
+    font-size:.68rem;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:.05em;
+    padding:3px 8px;
+    border-radius:20px;
+    color:#fff;
+    white-space:nowrap;
+  }
+
+  /* ---- stats ---- */
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+  .stat{text-align:center;padding:10px 4px;border-radius:10px;background:var(--paper);}
+  .stat .num{font-family:"IBM Plex Mono",monospace;font-size:1.35rem;font-weight:700;}
+  .stat .lbl{font-size:.65rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em;margin-top:2px;}
+
+  /* ---- chart ---- */
+  #chartWrap{width:100%;overflow-x:auto;}
+  #chartWrap svg{display:block;min-width:100%;}
+  .legend{display:flex;gap:16px;margin-top:8px;font-size:.72rem;color:var(--ink-soft);align-items:center;flex-wrap:wrap;}
+  .legend span{display:inline-flex;align-items:center;gap:5px;}
+  .dot{width:9px;height:9px;border-radius:50%;display:inline-block;}
+
+  /* ---- history ---- */
+  .day-group{margin-bottom:14px;}
+  .day-title{
+    font-family:"IBM Plex Mono",monospace;
+    font-size:.72rem;
+    color:var(--ink-soft);
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    margin:0 0 6px 2px;
+  }
+  .entry{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    background:var(--paper);
+    border-left:4px solid var(--normal);
+    border-radius:8px;
+    padding:9px 10px;
+    margin-bottom:6px;
+  }
+  .entry .time{
+    font-family:"IBM Plex Mono",monospace;
+    font-size:.75rem;
+    color:var(--ink-soft);
+    width:44px;
+    flex-shrink:0;
+  }
+  .entry .vals{
+    font-family:"IBM Plex Mono",monospace;
+    font-weight:700;
+    font-size:1.05rem;
+    flex-shrink:0;
+  }
+  .entry .pulse-val{
+    font-family:"IBM Plex Mono",monospace;
+    font-size:.78rem;
+    color:var(--ink-soft);
+    flex-shrink:0;
+  }
+  .entry .note{
+    font-size:.78rem;
+    color:var(--ink-soft);
+    flex:1;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .entry .del{
+    background:none;border:none;color:var(--ink-soft);
+    font-size:1rem;cursor:pointer;padding:2px 6px;flex-shrink:0;
+  }
+  .entry .del:hover{color:var(--crisis);}
+
+  .empty{
+    text-align:center;
+    color:var(--ink-soft);
+    font-size:.85rem;
+    padding:30px 10px;
+  }
+  .toolbar{display:flex;gap:8px;justify-content:flex-end;margin-top:-6px;margin-bottom:12px;}
+  .foot-note{
+    font-size:.72rem;
+    color:var(--ink-soft);
+    text-align:center;
+    margin-top:6px;
+    line-height:1.5;
+  }
+  @media (max-width:380px){
+    .stats{grid-template-columns:repeat(3,1fr);}
+    .stat .num{font-size:1.1rem;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>Registro&nbsp;de&nbsp;Presión</h1>
+    <svg class="pulse" viewBox="0 0 64 24"><polyline points="0,12 14,12 19,3 24,21 29,12 64,12" fill="none" stroke="#1F6F78" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>
+  </header>
+
+  <!-- CONFIG -->
+  <div class="card" id="configCard">
+    <h2>Conexión con tu Google Sheet</h2>
+    <div class="field">
+      <label for="cfgUrl">URL de la aplicación web (Apps Script)</label>
+      <input type="text" id="cfgUrl" placeholder="https://script.google.com/macros/s/.../exec">
+    </div>
+    <div class="field">
+      <label for="cfgToken">Clave secreta</label>
+      <input type="text" id="cfgToken" placeholder="tu clave">
+    </div>
+    <button class="btn-primary" id="btnGuardarConfig">Guardar y conectar</button>
+    <div id="cfgMsg" style="font-size:.78rem;color:var(--ink-soft);margin-top:8px;"></div>
+  </div>
+
+  <div id="mainArea" style="display:none;">
+
+  <div class="card" style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;">
+    <span id="syncStatus" style="font-size:.78rem;color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;">●&nbsp;conectando…</span>
+    <button class="btn-ghost" id="btnConfigToggle">⚙ Configuración</button>
+  </div>
+
+  <!-- FORM -->
+  <div class="card">
+    <h2>Nueva medición</h2>
+    <div class="grid2">
+      <div class="field">
+        <label for="fecha">Fecha</label>
+        <input type="date" id="fecha">
+      </div>
+      <div class="field">
+        <label for="hora">Hora</label>
+        <input type="time" id="hora">
+      </div>
+    </div>
+
+    <label style="font-size:.72rem;color:var(--ink-soft);font-weight:600;">Sistólica / Diastólica (mmHg)</label>
+    <div class="bp-inputs">
+      <input type="number" id="sistolica" inputmode="numeric" placeholder="120" min="40" max="300">
+      <span class="slash">/</span>
+      <input type="number" id="diastolica" inputmode="numeric" placeholder="80" min="30" max="200">
+    </div>
+
+    <div class="grid2">
+      <div class="field">
+        <label for="pulso">Pulso (lpm)</label>
+        <input type="number" id="pulso" inputmode="numeric" placeholder="opcional">
+      </div>
+      <div class="field">
+        <label for="brazo">Brazo</label>
+        <select id="brazo">
+          <option value="">—</option>
+          <option value="Izquierdo">Izquierdo</option>
+          <option value="Derecho">Derecho</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="nota">Nota (opcional)</label>
+      <input type="text" id="nota" placeholder="ej: después de caminar, con medicación...">
+    </div>
+
+    <button class="btn-primary" id="btnGuardar">Guardar medición</button>
+  </div>
+
+  <!-- STATS -->
+  <div class="card" id="statsCard" style="display:none;">
+    <h2>Promedios</h2>
+    <div class="stats">
+      <div class="stat"><div class="num" id="statToday">—</div><div class="lbl">Hoy</div></div>
+      <div class="stat"><div class="num" id="stat7">—</div><div class="lbl">7 días</div></div>
+      <div class="stat"><div class="num" id="stat30">—</div><div class="lbl">30 días</div></div>
+    </div>
+  </div>
+
+  <!-- CHART -->
+  <div class="card" id="chartCard" style="display:none;">
+    <h2>Tendencia</h2>
+    <div id="chartWrap"></div>
+    <div class="legend">
+      <span><span class="dot" style="background:var(--teal)"></span>Sistólica</span>
+      <span><span class="dot" style="background:var(--amber-line)"></span>Diastólica</span>
+    </div>
+  </div>
+
+  <!-- HISTORY -->
+  <div class="card">
+    <h2>Historial</h2>
+    <div class="toolbar">
+      <button class="btn-ghost" id="btnRefresh">↻ Actualizar</button>
+    </div>
+    <div id="historyList"><div class="empty">Cargando…</div></div>
+  </div>
+
+  <p class="foot-note">Los datos viven en tu Google Sheet y se sincronizan automáticamente entre todos los dispositivos donde configures esta app.<br>Esto no reemplaza el consejo de tu médico.</p>
+
+  </div><!-- /mainArea -->
+</div>
+
+<script>
+let entries = [];
+const $ = id => document.getElementById(id);
+
+function pad(n){return n.toString().padStart(2,'0');}
+function todayStr(){const d=new Date();return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;}
+function nowStr(){const d=new Date();return `${pad(d.getHours())}:${pad(d.getMinutes())}`;}
+
+function classify(sys, dia){
+  if(sys>=180 || dia>=120) return {label:'Crisis', color:'var(--crisis)'};
+  if(sys>=140 || dia>=90)  return {label:'Alta · Etapa 2', color:'var(--etapa2)'};
+  if(sys>=130 || dia>=80)  return {label:'Alta · Etapa 1', color:'var(--etapa1)'};
+  if(sys>=120 && dia<80)   return {label:'Elevada', color:'var(--elevada)'};
+  return {label:'Normal', color:'var(--normal)'};
+}
+
+const CFG_KEY = 'presion_sync_config';
+
+function getConfig(){
+  try{
+    const raw = localStorage.getItem(CFG_KEY);
+    return raw ? JSON.parse(raw) : null;
+  }catch(e){ return null; }
+}
+
+function setConfig(url, token){
+  localStorage.setItem(CFG_KEY, JSON.stringify({url, token}));
+}
+
+function setSyncStatus(state, text){
+  const el = $('syncStatus');
+  const colors = {ok:'#3E8A5C', error:'#C1443C', busy:'#C9A227'};
+  el.style.color = colors[state] || 'var(--ink-soft)';
+  el.textContent = `●  ${text}`;
+}
+
+async function loadEntries(){
+  const cfg = getConfig();
+  if(!cfg || !cfg.url || !cfg.token){
+    $('configCard').style.display = 'block';
+    $('mainArea').style.display = 'none';
+    return;
+  }
+  $('configCard').style.display = 'none';
+  $('mainArea').style.display = 'block';
+  setSyncStatus('busy', 'sincronizando…');
+  try{
+    const res = await fetch(`${cfg.url}?token=${encodeURIComponent(cfg.token)}&action=list`);
+    const data = await res.json();
+    if(data.error){
+      setSyncStatus('error', data.error === 'unauthorized' ? 'clave incorrecta' : 'error de conexión');
+      entries = [];
+    }else{
+      entries = data.map(e => ({
+        ...e,
+        sys: Number(e.sys), dia: Number(e.dia),
+        pulso: e.pulso === '' || e.pulso === undefined ? null : Number(e.pulso),
+        ts: Number(e.ts)
+      }));
+      setSyncStatus('ok', 'sincronizado');
+    }
+  }catch(err){
+    setSyncStatus('error', 'sin conexión');
+    entries = [];
+  }
+  render();
+}
+
+async function callSheet(params){
+  const cfg = getConfig();
+  const qs = new URLSearchParams({...params, token: cfg.token});
+  const res = await fetch(`${cfg.url}?${qs.toString()}`);
+  return res.json();
+}
+
+function resetForm(){
+  $('fecha').value = todayStr();
+  $('hora').value = nowStr();
+  $('sistolica').value = '';
+  $('diastolica').value = '';
+  $('pulso').value = '';
+  $('brazo').value = '';
+  $('nota').value = '';
+}
+
+async function addEntry(){
+  const fecha = $('fecha').value;
+  const hora = $('hora').value;
+  const sys = parseInt($('sistolica').value, 10);
+  const dia = parseInt($('diastolica').value, 10);
+  const pulso = $('pulso').value ? parseInt($('pulso').value,10) : null;
+  const brazo = $('brazo').value;
+  const nota = $('nota').value.trim();
+
+  if(!fecha || !hora || !sys || !dia){
+    alert('Completá al menos fecha, hora, sistólica y diastólica.');
+    return;
+  }
+
+  const btn = $('btnGuardar');
+  btn.disabled = true;
+  btn.textContent = 'Guardando…';
+  setSyncStatus('busy', 'guardando…');
+
+  const entry = {
+    id: Date.now()+'-'+Math.random().toString(36).slice(2,7),
+    fecha, hora, sys, dia, pulso, brazo, nota,
+    ts: new Date(`${fecha}T${hora}`).getTime()
+  };
+
+  try{
+    const result = await callSheet({
+      action:'add',
+      id: entry.id, fecha: entry.fecha, hora: entry.hora,
+      sys: entry.sys, dia: entry.dia,
+      pulso: entry.pulso ?? '', brazo: entry.brazo ?? '', nota: entry.nota ?? '',
+      ts: entry.ts
+    });
+    if(result.error) throw new Error(result.error);
+    entries.push(entry);
+    resetForm();
+    render();
+    setSyncStatus('ok', 'sincronizado');
+  }catch(e){
+    setSyncStatus('error', 'no se pudo guardar');
+    alert('No se pudo guardar. Detalle: ' + (e.message || 'error desconocido') + '\n\nSi el detalle dice "unauthorized", revisá que la clave coincida con la del script. Si dice otra cosa, puede que falte redesplegar el script después de editarlo.');
+  }finally{
+    btn.disabled = false;
+    btn.textContent = 'Guardar medición';
+  }
+}
+
+async function deleteEntry(id){
+  setSyncStatus('busy', 'eliminando…');
+  try{
+    const result = await callSheet({action:'delete', id});
+    if(result.error) throw new Error(result.error);
+    entries = entries.filter(e => e.id !== id);
+    render();
+    setSyncStatus('ok', 'sincronizado');
+  }catch(e){
+    setSyncStatus('error', 'no se pudo eliminar');
+    alert('No se pudo eliminar. Revisá tu conexión e intentá de nuevo.');
+  }
+}
+
+function fmtDateLabel(fecha){
+  const [y,m,d] = fecha.split('-').map(Number);
+  const dt = new Date(y, m-1, d);
+  return dt.toLocaleDateString('es-AR', {weekday:'short', day:'numeric', month:'short'});
+}
+
+function avg(arr, key){
+  if(!arr.length) return null;
+  return Math.round(arr.reduce((s,e)=>s+e[key],0)/arr.length);
+}
+
+function renderStats(){
+  if(!entries.length){ $('statsCard').style.display='none'; return; }
+  $('statsCard').style.display='block';
+  const now = Date.now();
+  const day = 86400000;
+  const today = entries.filter(e => e.fecha === todayStr());
+  const d7 = entries.filter(e => now - e.ts <= 7*day);
+  const d30 = entries.filter(e => now - e.ts <= 30*day);
+
+  const fmt = arr => arr.length ? `${avg(arr,'sys')}/${avg(arr,'dia')}` : '—';
+  $('statToday').textContent = fmt(today);
+  $('stat7').textContent = fmt(d7);
+  $('stat30').textContent = fmt(d30);
+}
+
+function renderChart(){
+  const sorted = [...entries].sort((a,b)=>a.ts-b.ts);
+  if(sorted.length < 2){ $('chartCard').style.display='none'; return; }
+  $('chartCard').style.display='block';
+
+  const recent = sorted.slice(-30);
+  const w = Math.max(340, recent.length*38);
+  const h = 200;
+  const padL = 34, padR = 10, padT = 10, padB = 24;
+  const plotW = w - padL - padR;
+  const plotH = h - padT - padB;
+  const yMin = 50, yMax = 190;
+
+  const x = i => padL + (recent.length===1 ? plotW/2 : (i/(recent.length-1))*plotW);
+  const y = v => padT + plotH - ((v - yMin)/(yMax - yMin))*plotH;
+
+  const bands = [
+    {from:180,to:190,color:'#7A1E1E'},
+    {from:140,to:180,color:'#C1443C'},
+    {from:130,to:140,color:'#D9752F'},
+    {from:120,to:130,color:'#C9A227'},
+    {from:50,to:120,color:'#3E8A5C'}
+  ];
+
+  let svg = `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">`;
+  bands.forEach(b=>{
+    svg += `<rect x="${padL}" y="${y(b.to)}" width="${plotW}" height="${y(b.from)-y(b.to)}" fill="${b.color}" opacity="0.07"/>`;
+  });
+  [60,80,100,120,140,160,180].forEach(v=>{
+    svg += `<line x1="${padL}" y1="${y(v)}" x2="${w-padR}" y2="${y(v)}" stroke="#D8DED6" stroke-width="1"/>`;
+    svg += `<text x="4" y="${y(v)+3}" font-size="9" font-family="IBM Plex Mono, monospace" fill="#5B6A61">${v}</text>`;
+  });
+
+  const sysPts = recent.map((e,i)=>`${x(i)},${y(e.sys)}`).join(' ');
+  const diaPts = recent.map((e,i)=>`${x(i)},${y(e.dia)}`).join(' ');
+  svg += `<polyline points="${sysPts}" fill="none" stroke="#1F6F78" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
+  svg += `<polyline points="${diaPts}" fill="none" stroke="#B5793A" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
+
+  recent.forEach((e,i)=>{
+    svg += `<circle cx="${x(i)}" cy="${y(e.sys)}" r="3.2" fill="#1F6F78"/>`;
+    svg += `<circle cx="${x(i)}" cy="${y(e.dia)}" r="3.2" fill="#B5793A"/>`;
+    if(i % Math.max(1,Math.ceil(recent.length/10)) === 0 || i===recent.length-1){
+      const [,m,d] = e.fecha.split('-');
+      svg += `<text x="${x(i)}" y="${h-6}" font-size="9" font-family="IBM Plex Mono, monospace" fill="#5B6A61" text-anchor="middle">${d}/${m}</text>`;
+    }
+  });
+
+  svg += `</svg>`;
+  $('chartWrap').innerHTML = svg;
+}
+
+function renderHistory(){
+  const list = $('historyList');
+  if(!entries.length){
+    list.innerHTML = '<div class="empty">Todavía no cargaste ninguna medición.<br>Sumá la primera arriba ↑</div>';
+    return;
+  }
+  const sorted = [...entries].sort((a,b)=>b.ts-a.ts);
+  const groups = {};
+  sorted.forEach(e=>{ (groups[e.fecha] ||= []).push(e); });
+
+  let html = '';
+  Object.keys(groups).forEach(fecha=>{
+    html += `<div class="day-group"><div class="day-title">${fmtDateLabel(fecha)}</div>`;
+    groups[fecha].forEach(e=>{
+      const cat = classify(e.sys, e.dia);
+      html += `<div class="entry" style="border-left-color:${cat.color}">
+        <span class="time">${e.hora}</span>
+        <span class="vals">${e.sys}/${e.dia}</span>
+        ${e.pulso ? `<span class="pulse-val">♥ ${e.pulso}</span>` : ''}
+        <span class="badge" style="background:${cat.color}">${cat.label}</span>
+        <span class="note">${e.brazo ? '('+e.brazo+') ' : ''}${e.nota || ''}</span>
+        <button class="del" data-id="${e.id}" title="Eliminar">✕</button>
+      </div>`;
+    });
+    html += `</div>`;
+  });
+  list.innerHTML = html;
+
+  list.querySelectorAll('.del').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      if(confirm('¿Eliminar esta medición?')) deleteEntry(btn.dataset.id);
+    });
+  });
+}
+
+function render(){
+  renderStats();
+  renderChart();
+  renderHistory();
+}
+
+$('btnGuardar').addEventListener('click', addEntry);
+$('btnRefresh').addEventListener('click', loadEntries);
+$('btnConfigToggle').addEventListener('click', () => {
+  $('configCard').style.display = $('configCard').style.display === 'none' ? 'block' : 'none';
+});
+
+$('btnGuardarConfig').addEventListener('click', async () => {
+  const url = $('cfgUrl').value.trim();
+  const token = $('cfgToken').value.trim();
+  if(!url || !token){
+    $('cfgMsg').textContent = 'Completá la URL y la clave.';
+    $('cfgMsg').style.color = 'var(--etapa2)';
+    return;
+  }
+  if(!url.startsWith('https://script.google.com/')){
+    $('cfgMsg').textContent = 'Esa no parece una URL de Apps Script válida.';
+    $('cfgMsg').style.color = 'var(--etapa2)';
+    return;
+  }
+  setConfig(url, token);
+  $('cfgMsg').textContent = 'Conectando...';
+  $('cfgMsg').style.color = 'var(--ink-soft)';
+  await loadEntries();
+  if(!getConfigError()){
+    $('cfgMsg').textContent = '';
+  }
+});
+
+function getConfigError(){
+  return $('syncStatus').textContent.includes('clave incorrecta') || $('syncStatus').textContent.includes('error');
+}
+
+// precargar campos de config si ya existen (para editarlos)
+const existingCfg = getConfig();
+if(existingCfg){
+  $('cfgUrl').value = existingCfg.url;
+  $('cfgToken').value = existingCfg.token;
+}
+
+resetForm();
+loadEntries();
+</script>
+</body>
+</html>
