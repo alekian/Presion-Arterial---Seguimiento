@@ -424,7 +424,10 @@ function resetForm(){
   $('nota').value = '';
 }
 
+let isSaving = false;
+
 async function addEntry(){
+  if(isSaving) return; // bloqueo extra por si el click se dispara dos veces
   const fecha = $('fecha').value;
   const hora = $('hora').value;
   const sys = parseInt($('sistolica').value, 10);
@@ -438,9 +441,12 @@ async function addEntry(){
     return;
   }
 
+  isSaving = true;
   const btn = $('btnGuardar');
   btn.disabled = true;
-  btn.textContent = 'Guardando…';
+  btn.style.opacity = '0.5';
+  btn.style.pointerEvents = 'none';
+  btn.textContent = '⏳ Guardando…';
   setSyncStatus('busy', 'guardando…');
 
   const entry = {
@@ -466,7 +472,10 @@ async function addEntry(){
     setSyncStatus('error', 'no se pudo guardar');
     alert('No se pudo guardar. Detalle: ' + (e.message || 'error desconocido') + '\n\nSi el detalle dice "unauthorized", revisá que la clave coincida con la del script. Si dice otra cosa, puede que falte redesplegar el script después de editarlo.');
   }finally{
+    isSaving = false;
     btn.disabled = false;
+    btn.style.opacity = '1';
+    btn.style.pointerEvents = 'auto';
     btn.textContent = 'Guardar medición';
   }
 }
